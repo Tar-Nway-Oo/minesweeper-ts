@@ -23,4 +23,20 @@ body {
 
 .cell {
   border: 1px solid;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cell[data-status="number"] {
+  background-color: hsl(0, 0%, 30%);
+  color: hsl(0, 0%, 100%);
+}
+
+.cell[data-status="mine"] {
+  background-color: hsl(0, 70%, 60%);
+}
+
+.cell[data-status="marked"] {
+  background-color: hsl(60, 70%, 60%);
 }
