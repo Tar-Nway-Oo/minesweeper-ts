@@ -1,1 +1,1 @@
-# minesweeper-ts
+# Minesweeper
