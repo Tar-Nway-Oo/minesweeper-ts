@@ -35,7 +35,7 @@ function createCells(boardSize: number, numberOfMine: number) {
          const cellElement = document.createElement("div");
          cellElement.classList.add("cell");
          cellElement.dataset.status = STATUSES.HIDDEN;
-         const cell = {x, y, element: cellElement, isMine: minePositions.some(position => isMatched(position, {x, y}))};
+         const cell = {x, y, element: cellElement, isMine: minePositions.some(position => checkMatch(position, {x, y}))};
          row.push(cell);
       }
       cellArray.push(row);
@@ -50,7 +50,7 @@ function getMinePositions(boardSize: number, numberOfMine: number) {
          x: getRandomNumber(boardSize),
          y: getRandomNumber(boardSize)
       };
-      if (!positions.some(p => isMatched(p, position))) {
+      if (!positions.some(p => checkMatch(p, position))) {
          positions.push(position);
       }
    }
@@ -61,7 +61,7 @@ function getRandomNumber(size: number) {
    return Math.floor(Math.random() * size);
 }
 
-function isMatched(a: position, b: position) {
+function checkMatch(a: position, b: position) {
    return a.x === b.x && a.y === b.y;
 }
 
@@ -70,7 +70,10 @@ function displayCells() {
    cells.forEach(row => {
       row.forEach(cell => {
          const cellElement = cell.element;
-         cellElement.addEventListener("click", () => revealCell(cells, cell));
+         cellElement.addEventListener("click", () => {
+            revealCell(cells, cell);
+            checkGameStatus(cells);
+         });
          cellElement.addEventListener("contextmenu", (e) => {
             e.preventDefault();
             markCell(cell);
@@ -90,12 +93,50 @@ function revealCell(cells: cell[][], cell: cell) {
    }
    element.dataset.status = STATUSES.NUMBER;
    const adjacentCells = getAdjacentCells(cells, cell);
-   const mines = adjacentCells.filter(cell => cell.isMine);
+   const mines = adjacentCells.filter(c => c.isMine);
    if (mines.length === 0) {
       adjacentCells.forEach(c => revealCell(cells, c));
    } else {
       element.textContent = mines.length.toString();
    }
+}
+
+function checkGameStatus(cells: cell[][]) {
+  const hasWon = checkWin(cells);
+  const hasLost = checkLose(cells);
+
+  if (hasWon || hasLost) {
+    board.addEventListener("click", (e) => {
+      e.stopImmediatePropagation();
+    }, {capture: true});
+
+    board.addEventListener("contextmenu", (e) => {
+      e.stopImmediatePropagation();
+    }, {capture: true});
+  }
+
+  if (hasWon) {
+    statusText.textContent = "You Win.";
+  }
+
+  if (hasLost) {
+   statusText.textContent = "You Lost.";
+ }
+}
+
+function checkWin(cells: cell[][]) {
+   return cells.every(row => {
+      return row.every(cell => {
+         const cellStatus = cell.element.dataset.status;
+         return cellStatus === STATUSES.NUMBER || (cell.isMine && cellStatus === STATUSES.HIDDEN || cellStatus === STATUSES.MARKED);
+      });
+   });
+}
+
+function checkLose(cells: cell[][]) {
+   return cells.some(row => {
+      return row.some(cell => cell.element.dataset.status === STATUSES.MINE);
+   });
 }
 
 function listMinesLeft(cells: cell[][]) {
@@ -108,21 +149,23 @@ function listMinesLeft(cells: cell[][]) {
 function getAdjacentCells(cells: cell[][], cell: cell) {
    const {x, y} = cell;
    const adjacentCells = [];
-   for (let xOffest = -1; xOffest < 2; xOffest++) {
-     for (let yOffest = -1; yOffest < 2; yOffest++) {
+   for (let xOffest = -1; xOffest <= 1; xOffest++) {
+     for (let yOffest = -1; yOffest <= 1; yOffest++) {
        const adjacentCell = cells[x + xOffest]?.[y + yOffest];
-       adjacentCells.push(adjacentCell);
+       if (adjacentCell != null) {
+         adjacentCells.push(adjacentCell);
+       }
      }
    }
    return adjacentCells;
  }
 
 function markCell(cell: cell) {
-   const {element} = cell;
-   if (element.dataset.status !== STATUSES.HIDDEN && element.dataset.status !== STATUSES.MARKED) return;
-   if (element.dataset.status === STATUSES.HIDDEN) {
-      element.dataset.status = STATUSES.MARKED;
+   const cellStatus = cell.element.dataset.status;
+   if (cellStatus !== STATUSES.HIDDEN && cellStatus !== STATUSES.MARKED) return;
+   if (cellStatus === STATUSES.HIDDEN) {
+      cell.element.dataset.status = STATUSES.MARKED;
    } else {
-      element.dataset.status = STATUSES.HIDDEN;
+      cell.element.dataset.status = STATUSES.HIDDEN;
    }
 }
